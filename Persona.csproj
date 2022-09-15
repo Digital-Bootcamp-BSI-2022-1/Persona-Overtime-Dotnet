@@ -1,13 +1,15 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>22680846-0e21-4c60-9e17-3cfdfd18096b</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="CloudinaryDotNet" Version="1.19.0" />
     <PackageReference Include="EntityFramework6.Npgsql" Version="6.4.3" />
     <PackageReference Include="JWT" Version="9.0.3" />
     <PackageReference Include="MailKit" Version="3.4.0" />

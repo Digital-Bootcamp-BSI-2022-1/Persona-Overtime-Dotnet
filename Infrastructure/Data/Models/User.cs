@@ -56,5 +56,7 @@ using System.ComponentModel.DataAnnotations.Schema;
         [Required]
         [Column("join_date", TypeName = "varchar(50)")]
         public string? join_date { get; set; }
+        public Organization? organization { get; set; }
+        public List<Overtime>? users { get; set; }
     }
     }

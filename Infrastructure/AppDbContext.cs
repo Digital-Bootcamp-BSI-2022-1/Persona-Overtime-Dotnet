@@ -22,6 +22,9 @@ class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        modelBuilder.Entity<User>().HasOne(p => p.organization).WithMany(b => b.member);
     }
+        
 
 }

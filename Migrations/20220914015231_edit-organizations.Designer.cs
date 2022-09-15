@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using dotnet_2.Infrastructure.Data;
@@ -11,9 +12,10 @@ using dotnet_2.Infrastructure.Data;
 namespace Persona.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220914015231_edit-organizations")]
+    partial class editorganizations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -89,38 +91,33 @@ namespace Persona.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("id"));
 
-                    b.Property<string>("approved_date")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
+                    b.Property<DateOnly>("approved_date")
+                        .HasColumnType("date")
                         .HasColumnName("approved_date");
 
-                    b.Property<string>("approved_time")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
+                    b.Property<TimeOnly>("approved_time")
+                        .HasColumnType("time")
                         .HasColumnName("approved_time");
 
                     b.Property<string>("attachment")
+                        .IsRequired()
                         .HasColumnType("varchar(500)")
                         .HasColumnName("attachment");
 
-                    b.Property<string>("completed_date")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
+                    b.Property<DateOnly>("completed_date")
+                        .HasColumnType("date")
                         .HasColumnName("completed_date");
 
-                    b.Property<string>("completed_time")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
+                    b.Property<TimeOnly>("completed_time")
+                        .HasColumnType("time")
                         .HasColumnName("completed_time");
 
-                    b.Property<string>("end_date")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
+                    b.Property<DateOnly>("end_date")
+                        .HasColumnType("date")
                         .HasColumnName("end_date");
 
-                    b.Property<string>("end_time")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
+                    b.Property<TimeOnly>("end_time")
+                        .HasColumnType("time")
                         .HasColumnName("end_time");
 
                     b.Property<int>("is_completed")
@@ -128,36 +125,29 @@ namespace Persona.Migrations
                         .HasColumnName("is_completed");
 
                     b.Property<string>("remarks")
+                        .IsRequired()
                         .HasColumnType("varchar(200)")
                         .HasColumnName("remarks");
 
-                    b.Property<string>("request_date")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
+                    b.Property<DateOnly>("request_date")
+                        .HasColumnType("date")
                         .HasColumnName("request_date");
 
-                    b.Property<string>("request_time")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
+                    b.Property<TimeOnly>("request_time")
+                        .HasColumnType("time")
                         .HasColumnName("request_time");
 
-                    b.Property<string>("start_date")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
+                    b.Property<DateOnly>("start_date")
+                        .HasColumnType("date")
                         .HasColumnName("start_date");
 
-                    b.Property<string>("start_time")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
+                    b.Property<TimeOnly>("start_time")
+                        .HasColumnType("time")
                         .HasColumnName("start_time");
 
                     b.Property<int>("status")
                         .HasColumnType("int")
                         .HasColumnName("status");
-
-                    b.Property<string>("status_text")
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("status_text");
 
                     b.Property<int>("userid")
                         .HasColumnType("integer");
@@ -192,6 +182,9 @@ namespace Persona.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(10)")
                         .HasColumnName("grade");
+
+                    b.Property<bool>("is_head")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("join_date")
                         .IsRequired()

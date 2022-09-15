@@ -7,6 +7,8 @@ using dotnet_2.Infrastructure.Dto;
 using dotnet_2.Infrastructure.Shared;
 using dotnet_2.Infrastructure.Data;
 using dotnet_2.Infrastructure;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 
 using Microsoft.OpenApi.Models;
 using Microsoft.IdentityModel.Tokens;
@@ -86,6 +88,11 @@ builder.Services.AddSingleton<IMailServicePassword, MailServicePassword>();
 builder.Services.AddSingleton<IWaServicePassword, WaServicePasswords>();
 
 builder.Services.AddAuthorization();
+builder.Services.AddAuthentication();
+
+builder.Services.AddHttpContextAccessor();
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var app = builder.Build();
 
@@ -115,6 +122,27 @@ app.MapPost("/register", async (User request, AppDbContext db) =>
 
 });
 
+//Edit User Data
+app.MapPut("/edit/users", async (User editUser, AppDbContext db, HttpContext context) =>
+{
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FindAsync(int.Parse(tokenData.id!));
+
+    if (user is null) return Results.NotFound();
+    user.nik = editUser.nik;
+    user.password = editUser.password;
+    user.name = editUser.name;
+    user.role = editUser.role;
+    user.grade = editUser.grade;
+    user.employment_status = editUser.employment_status;
+    user.phone = editUser.phone;
+    user.email = editUser.email;
+    user.ktp = editUser.ktp;
+    user.npwp = editUser.npwp;
+    user.join_date = editUser.join_date;
+    await db.SaveChangesAsync();
+    return Results.Ok("Edit Data Successfully");
+});
 
 // Login
 app.MapPost("/auth/login", async (LoginRequest request, AppDbContext db) =>
@@ -160,16 +188,27 @@ app.MapPost("/auth/login", async (LoginRequest request, AppDbContext db) =>
     });
 });
 
+// Get User Data
+app.MapGet("/profile", [Authorize] async (AppDbContext db, HttpContext context) => 
+{
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FindAsync(int.Parse(tokenData.id!));
+
+    if (user is null) return Results.NotFound("Data Was Not Found");
+    var userdto = new UserDTO(user);
+    return Results.Ok(userdto);
+});
+
 // Create Organization Data
 app.MapPost("/post/organization", async (Organization request, AppDbContext db, HttpContext context) =>
 {
-    var result = await db.Organizations.Where(item => item.member == request.member).FirstOrDefaultAsync();
+    var result = await db.Organizations.Where(item => item.id == request.id).FirstOrDefaultAsync();
 
     if (result != null)
     {
         return Results.BadRequest(new RegisterResponse{
         succes = false,
-        message= $"employee already exist",
+        message= "organization ID already exist",
         origin = null
     });
     }
@@ -179,11 +218,173 @@ app.MapPost("/post/organization", async (Organization request, AppDbContext db, 
     return Results.Ok(new RegisterResponse
     {
         succes = true,
-        message= $"Employee Successfully Added",
+        message= $"Organization data Successfully Added",
         origin = null
     });
 });
 
+
+// // post Overtime data
+// app.MapPost("/overtime", [Authorize] async (int id, HttpRequest request, AppDbContext db, HttpContext context) =>
+// {
+//     var tokenData = new Jwt().GetTokenClaim(context);
+//     var user = await db.Users.FindAsync(int.Parse(tokenData.id!));
+
+//     int.TryParse(request.Form["id"], out id);
+//     string? start_date = request.Form["start_date"];
+//     string? end_date = request.Form["end_date"];
+//     string? start_time = request.Form["start_time"];
+//     string? end_time = request.Form["end_time"];
+//     int.TryParse(request.Form["status"], out int status);
+//     int.TryParse(request.Form["is_completed"], out int is_completed);
+//     string? remarks = request.Form["remarks"];
+//     var attachment = request.Form.Files["attachment"];
+
+//     var result = await db.Overtime.Where(item => item.id == id).FirstOrDefaultAsync();
+
+//     if (result != null)
+//     {
+//         result.start_date = start_date;
+//         result.end_date = end_date;
+//         result.start_time = start_time;
+//         result.end_time = end_time;
+//         result.status = status;
+
+
+//     Account account = new Account(
+//         "personacloud",
+//         "928111718482376",
+//         "jSta9msnS2hrHI-2SYyl7D1wPXA");
+
+//     Cloudinary cloudinary = new Cloudinary(account);
+//     cloudinary.Api.Secure = true;
+
+
+//     var uploadParams = new ImageUploadParams(){
+//     File = new FileDescription(@"https://upload.wikimedia.org/wikipedia/commons/a/ae/Olympic_flag.jpg"),
+//     PublicId = "olympic_flag"};
+//     var uploadResult = cloudinary.Upload(uploadParams);
+
+//         // var path_extention = new FileInfo(request.Form.Files["attachment"].FileName);
+//         // var filePath = Path.Combine("image", $"{DateTime.Now.ToString("yyyy-MM-dd hh-mm-ss")}_attachment_{path_extention.Extension}");
+//         // using (var stream = System.IO.File.Create(filePath))
+//         //     {
+//         //         await request.Form.Files["attachment"].CopyToAsync(stream);
+//         //     }
+//         switch (status)
+//             {
+//             case 1:
+//                 result.status_text = "Request Approval";
+//                 result.request_date = DateTime.Now.ToString("MM/dd/yyyy");
+//                 result.request_time = DateTime.Now.ToString("HH:mm:ss");
+//                 break;
+//             case 2:
+//                 result.status_text = "Approved";
+//                 result.approved_date = DateTime.Now.ToString("MM/dd/yyyy");
+//                 result.approved_time = DateTime.Now.ToString("HH:mm:ss");
+//                 break;
+//             case 3:
+//                 result.status_text = "Rejected";
+//                 result.is_completed = 1;
+//                 result.completed_date = DateTime.Now.ToString("MM/dd/yyyy");
+//                 result.completed_time = DateTime.Now.ToString("HH:mm:ss");
+//                 break;
+//             case 4:
+//                 result.status_text = "Settlement Approval";
+//                 result.start_date = start_date;
+//                 result.start_time = start_time;
+//                 result.end_date = end_date;
+//                 result.end_time = end_time;
+//                 result.remarks = remarks;
+//                 result.attachment = filePath;
+//                 break;
+//             case 5:
+//                 result.status_text = "Revise";
+//                 break;
+//             case 6:
+//                 result.status_text = "Completed";
+//                 result.is_completed = 1;
+//                 result.completed_date = DateTime.Now.ToString("MM/dd/yyyy");
+//                 result.completed_time = DateTime.Now.ToString("HH:mm:ss");
+//                 break;
+//             case 9:
+//                 result.status_text = "Cancelled";
+//                 result.is_completed = 1;
+//                 result.completed_date = DateTime.Now.ToString("MM/dd/yyyy");
+//                 result.completed_time = DateTime.Now.ToString("HH:mm:ss");
+//                 break;
+//             }
+//         result.is_completed = is_completed;
+//         result.remarks = remarks;
+//         result.attachment = filePath;
+        
+//         return Results.Ok(new RegisterResponse
+//         {
+//             succes = true,
+//             message= "Overtime Successfully Updated",
+//             origin = null
+//         });
+//     }
+//     Overtime overtime = new Overtime();
+//     switch (status)
+//     {
+//         case 1:
+//             overtime.status_text = "Request Approval";
+//             break;
+//         case 2:
+//             overtime.status_text = "Approved";
+//             break;
+//         case 3:
+//             overtime.status_text = "Rejected";
+//             break;
+//         case 4:
+//             overtime.status_text = "Settlement Approval";
+//             break;
+//         case 5:
+//             overtime.status_text = "Revise";
+//             break;
+//         case 6:
+//             overtime.status_text = "Completed";
+//             break;
+
+//         case 9:
+//             overtime.status_text = "Cancelled";
+//             break;
+//     }
+//         result!.start_date = start_date;
+//         result.user.id = user.id;
+//         result.end_date = end_date;
+//         result.start_time = start_time;
+//         result.end_time = end_time;
+//         result.status = status;
+//         result.is_completed = is_completed;
+//         result.remarks = remarks;
+//         var path_extention2 = new FileInfo(request.Form.Files["attachment"].FileName);
+//         var filePath2 = Path.Combine("image", $"{DateTime.Now.ToString("yyyy-MM-dd hh-mm-ss")}_attachment_{path_extention2.Extension}");
+//         using (var stream = System.IO.File.Create(filePath2))
+//             {
+//                 await request.Form.Files["attachment"].CopyToAsync(stream);
+//             }
+//         result.attachment = filePath2;
+
+//         var dateNow = DateTime.Now;
+//         result.request_date = DateTime.Now.ToString("MM/dd/yyyy");
+//         result.request_time = DateTime.Now.ToString("HH:mm:ss");
+
+//     db.Overtime.Add(overtime);
+
+//     await db.SaveChangesAsync();
+
+//     return Results.Ok(new RegisterResponse
+//     {
+//         succes = true,
+//         message= "Overtime Data Successfully Added",
+//         origin = null
+//     });
+// });
+
+app.UseAuthentication();
+app.UseAuthorization();
 app.Run();
 
 record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
