@@ -200,7 +200,7 @@ app.MapGet("/profile", [Authorize] async (AppDbContext db, HttpContext context) 
 });
 
 // Create Organization Data
-app.MapPost("/post/organization", async (Organization request, AppDbContext db, HttpContext context) =>
+app.MapPost("/post/organization", [Authorize] async (Organization request, AppDbContext db, HttpContext context) =>
 {
     var result = await db.Organizations.Where(item => item.id == request.id).FirstOrDefaultAsync();
 
@@ -223,165 +223,282 @@ app.MapPost("/post/organization", async (Organization request, AppDbContext db, 
     });
 });
 
+// Post work shedule data
+app.MapPost("/post/work_shedule", [Authorize] async (HttpRequest request, AppDbContext db, HttpContext context) =>
+{
+    int.TryParse(request.Form["id"], out int id);
+    string? work_shedule = request.Form["work_shedule"];
+    TimeOnly.TryParse(request.Form["start_time"], out TimeOnly start_time);
+    TimeOnly.TryParse(request.Form["end_time"], out TimeOnly end_time);
+    TimeOnly.TryParse(request.Form["start_break_time1"], out TimeOnly start_break_time1);
+    TimeOnly.TryParse(request.Form["end_break_time1"], out TimeOnly end_break_time1);
+    TimeOnly.TryParse(request.Form["start_break_time2"], out TimeOnly start_break_time2);
+    TimeOnly.TryParse(request.Form["end_break_time2"], out TimeOnly end_break_time2);
 
-// // post Overtime data
-// app.MapPost("/overtime", [Authorize] async (int id, HttpRequest request, AppDbContext db, HttpContext context) =>
-// {
-//     var tokenData = new Jwt().GetTokenClaim(context);
-//     var user = await db.Users.FindAsync(int.Parse(tokenData.id!));
+    var result = await db.WorkSchedules.Where(item => item.id == id).FirstOrDefaultAsync();
 
-//     int.TryParse(request.Form["id"], out id);
-//     string? start_date = request.Form["start_date"];
-//     string? end_date = request.Form["end_date"];
-//     string? start_time = request.Form["start_time"];
-//     string? end_time = request.Form["end_time"];
-//     int.TryParse(request.Form["status"], out int status);
-//     int.TryParse(request.Form["is_completed"], out int is_completed);
-//     string? remarks = request.Form["remarks"];
-//     var attachment = request.Form.Files["attachment"];
+    if (result != null)
+    {
+        return Results.BadRequest(new RegisterResponse{
+        succes = false,
+        message= "WorkShedule ID already exist",
+        origin = null
+    });
+    }
+    WorkSchedule workSchedule = new WorkSchedule();
+    workSchedule.work_shedule = work_shedule;
+    workSchedule.start_time = start_time;
+    workSchedule.end_time = end_time;
+    workSchedule.start_break_time1 = start_break_time1;
+    workSchedule.end_break_time1 = end_break_time1;
+    workSchedule.start_break_time2 = start_break_time2;
+    workSchedule.end_break_time2 = end_break_time2;
 
-//     var result = await db.Overtime.Where(item => item.id == id).FirstOrDefaultAsync();
+    db.WorkSchedules.Add(workSchedule);
+    await db.SaveChangesAsync();
 
-//     if (result != null)
-//     {
-//         result.start_date = start_date;
-//         result.end_date = end_date;
-//         result.start_time = start_time;
-//         result.end_time = end_time;
-//         result.status = status;
+    return Results.Ok(new RegisterResponse
+    {
+        succes = true,
+        message= $"WorkShedule data Successfully Added",
+        origin = null
+    });
+});
 
+// post Overtime data
+app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db, HttpContext context) =>
+{
+    DateOnly.TryParse(request.Form["start_date"], out DateOnly start_date);
+    DateOnly.TryParse(request.Form["end_date"], out DateOnly end_date);
+    TimeOnly.TryParse(request.Form["start_time"], out TimeOnly start_time);
+    TimeOnly.TryParse(request.Form["end_time"], out TimeOnly end_time);
+    int.TryParse(request.Form["status"], out int status);
+    int.TryParse(request.Form["is_completed"], out int is_completed);
+    string? remarks = request.Form["remarks"];
+    var attachment = request.Form.Files["attachment"];
 
-//     Account account = new Account(
-//         "personacloud",
-//         "928111718482376",
-//         "jSta9msnS2hrHI-2SYyl7D1wPXA");
+    var result = await db.Users.Where(item => item.grade == "VIA").FirstOrDefaultAsync();
 
-//     Cloudinary cloudinary = new Cloudinary(account);
-//     cloudinary.Api.Secure = true;
+    if (result == null)
+    {
+        return Results.NotFound(new RegisterResponse
+        {
+            succes = false,
+            message= "Employee with your grade is not allowed request Overtime",
+            origin = null
+        });
+    }
+   
+    var overtime_data = await db.Overtime.Where(item => item.start_date == start_date).FirstOrDefaultAsync();
+    
+    if (overtime_data != null)
+        {
+            DateOnly overtime_date = overtime_data!.start_date;
+            return Results.BadRequest(new RegisterResponse
+            {
+                succes = false,
+                message= $"You already have overtime request on {overtime_date}",
+                origin = null
+            });
+        }
+    
+    Account account = new Account(
+        "personacloud",
+        "928111718482376",
+        "jSta9msnS2hrHI-2SYyl7D1wPXA");
 
+    Cloudinary cloudinary = new Cloudinary(account);
+    cloudinary.Api.Secure = true;
 
-//     var uploadParams = new ImageUploadParams(){
-//     File = new FileDescription(@"https://upload.wikimedia.org/wikipedia/commons/a/ae/Olympic_flag.jpg"),
-//     PublicId = "olympic_flag"};
-//     var uploadResult = cloudinary.Upload(uploadParams);
+    var uploadFile = context.Request.Form.Files["attachment"];
+    var file = new FileInfo(context.Request.Form.Files["attachment"].FileName);
+    string filename = file.ToString().Substring(0, file.ToString().Length - file.Extension.ToString().Length);
 
-//         // var path_extention = new FileInfo(request.Form.Files["attachment"].FileName);
-//         // var filePath = Path.Combine("image", $"{DateTime.Now.ToString("yyyy-MM-dd hh-mm-ss")}_attachment_{path_extention.Extension}");
-//         // using (var stream = System.IO.File.Create(filePath))
-//         //     {
-//         //         await request.Form.Files["attachment"].CopyToAsync(stream);
-//         //     }
-//         switch (status)
-//             {
-//             case 1:
-//                 result.status_text = "Request Approval";
-//                 result.request_date = DateTime.Now.ToString("MM/dd/yyyy");
-//                 result.request_time = DateTime.Now.ToString("HH:mm:ss");
-//                 break;
-//             case 2:
-//                 result.status_text = "Approved";
-//                 result.approved_date = DateTime.Now.ToString("MM/dd/yyyy");
-//                 result.approved_time = DateTime.Now.ToString("HH:mm:ss");
-//                 break;
-//             case 3:
-//                 result.status_text = "Rejected";
-//                 result.is_completed = 1;
-//                 result.completed_date = DateTime.Now.ToString("MM/dd/yyyy");
-//                 result.completed_time = DateTime.Now.ToString("HH:mm:ss");
-//                 break;
-//             case 4:
-//                 result.status_text = "Settlement Approval";
-//                 result.start_date = start_date;
-//                 result.start_time = start_time;
-//                 result.end_date = end_date;
-//                 result.end_time = end_time;
-//                 result.remarks = remarks;
-//                 result.attachment = filePath;
-//                 break;
-//             case 5:
-//                 result.status_text = "Revise";
-//                 break;
-//             case 6:
-//                 result.status_text = "Completed";
-//                 result.is_completed = 1;
-//                 result.completed_date = DateTime.Now.ToString("MM/dd/yyyy");
-//                 result.completed_time = DateTime.Now.ToString("HH:mm:ss");
-//                 break;
-//             case 9:
-//                 result.status_text = "Cancelled";
-//                 result.is_completed = 1;
-//                 result.completed_date = DateTime.Now.ToString("MM/dd/yyyy");
-//                 result.completed_time = DateTime.Now.ToString("HH:mm:ss");
-//                 break;
-//             }
-//         result.is_completed = is_completed;
-//         result.remarks = remarks;
-//         result.attachment = filePath;
+    using (var filestream = uploadFile!.OpenReadStream())
+    {
+        var uploadUpload = new ImageUploadParams
+        {
+            File = new FileDescription(uploadFile.FileName, filestream),
+            PublicId = $"{DateTime.Now.ToString("yyyy-MM-ddThh-mm-ss")}_{filename}"
+        };
+
+        var uploadResult = await cloudinary.UploadAsync(uploadUpload);
+
+    Overtime overtime = new Overtime();
+    switch (status)
+            {
+            case 1:
+                overtime.status_text = "Request Approval";
+                overtime.request_date = DateOnly.FromDateTime(DateTime.Now);
+                overtime.request_time = TimeOnly.FromDateTime(DateTime.Now);
+                break;
+            case 2:
+                overtime.status_text = "Approved";
+                overtime.approved_date = DateOnly.FromDateTime(DateTime.Now);
+                overtime.approved_time = TimeOnly.FromDateTime(DateTime.Now);
+                break;
+            case 3:
+                overtime.status_text = "Rejected";
+                overtime.is_completed = 1;
+                overtime.completed_date = DateOnly.FromDateTime(DateTime.Now);
+                overtime.completed_time = TimeOnly.FromDateTime(DateTime.Now);
+                break;
+            case 4:
+                overtime.status_text = "Settlement Approval";
+                overtime.start_date = start_date;
+                overtime.start_time = start_time;
+                overtime.end_date = end_date;
+                overtime.end_time = end_time;
+                overtime.remarks = remarks;
+                overtime.attachment = uploadResult.Url.ToString();
+                break;
+            case 5:
+                overtime.status_text = "Revise";
+                break;
+            case 6:
+                overtime.status_text = "Completed";
+                overtime.is_completed = 1;
+                overtime.completed_date = DateOnly.FromDateTime(DateTime.Now);
+                overtime.completed_time = TimeOnly.FromDateTime(DateTime.Now);
+                break;
+            case 9:
+                overtime.status_text = "Cancelled";
+                overtime.is_completed = 1;
+                overtime.completed_date = DateOnly.FromDateTime(DateTime.Now);
+                overtime.completed_time = TimeOnly.FromDateTime(DateTime.Now);
+                break;  
+    }
+
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FindAsync(int.Parse(tokenData.id!));
+
+        overtime.start_date = start_date;
+        overtime.user = user;
+        overtime.end_date = end_date;
+        overtime.start_time = start_time;
+        overtime.end_time = end_time;
+
+        var ot_range = Enumerable.Range(0, int.MaxValue)
+          .Select(multiplier => start_time.Add(TimeSpan.FromMinutes(30 * multiplier)))
+          .TakeWhile(span => span <= end_time);
+
+        var breaktime = await db.WorkSchedules.FirstOrDefaultAsync();
+
+        int thisDuration1 = (int) (end_time - start_time).Hours;
+
+        foreach(TimeOnly i in ot_range)
+        {
+            if ( i >= breaktime!.start_break_time1 && i <= breaktime.end_break_time1) thisDuration1--;
+            else if ( i >= breaktime!.start_break_time2 && i <= breaktime.end_break_time2) thisDuration1--;
+        };
         
-//         return Results.Ok(new RegisterResponse
-//         {
-//             succes = true,
-//             message= "Overtime Successfully Updated",
-//             origin = null
-//         });
-//     }
-//     Overtime overtime = new Overtime();
-//     switch (status)
-//     {
-//         case 1:
-//             overtime.status_text = "Request Approval";
-//             break;
-//         case 2:
-//             overtime.status_text = "Approved";
-//             break;
-//         case 3:
-//             overtime.status_text = "Rejected";
-//             break;
-//         case 4:
-//             overtime.status_text = "Settlement Approval";
-//             break;
-//         case 5:
-//             overtime.status_text = "Revise";
-//             break;
-//         case 6:
-//             overtime.status_text = "Completed";
-//             break;
+        overtime.duration = thisDuration1;
 
-//         case 9:
-//             overtime.status_text = "Cancelled";
-//             break;
-//     }
-//         result!.start_date = start_date;
-//         result.user.id = user.id;
-//         result.end_date = end_date;
-//         result.start_time = start_time;
-//         result.end_time = end_time;
-//         result.status = status;
-//         result.is_completed = is_completed;
-//         result.remarks = remarks;
-//         var path_extention2 = new FileInfo(request.Form.Files["attachment"].FileName);
-//         var filePath2 = Path.Combine("image", $"{DateTime.Now.ToString("yyyy-MM-dd hh-mm-ss")}_attachment_{path_extention2.Extension}");
-//         using (var stream = System.IO.File.Create(filePath2))
-//             {
-//                 await request.Form.Files["attachment"].CopyToAsync(stream);
-//             }
-//         result.attachment = filePath2;
+        overtime.status = status;
+        overtime.is_completed = is_completed;
+        overtime.remarks = remarks;
+        overtime.attachment = uploadResult.Url.ToString();
+        overtime.request_date = DateOnly.FromDateTime(DateTime.Now);
+        overtime.request_time = TimeOnly.FromDateTime(DateTime.Now);
 
-//         var dateNow = DateTime.Now;
-//         result.request_date = DateTime.Now.ToString("MM/dd/yyyy");
-//         result.request_time = DateTime.Now.ToString("HH:mm:ss");
+    db.Overtime.Add(overtime);
+    await db.SaveChangesAsync();
 
-//     db.Overtime.Add(overtime);
+    return Results.Ok(new RegisterResponse
+    {
+        succes = true,
+        message= "Overtime Data Successfully Added",
+        origin = null
+    });
+}});
 
-//     await db.SaveChangesAsync();
+// update Overtime data
+app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest request, AppDbContext db, HttpContext context) =>
+{
+    DateOnly.TryParse(request.Form["start_date"], out DateOnly start_date);
+    DateOnly.TryParse(request.Form["end_date"], out DateOnly end_date);
+    TimeOnly.TryParse(request.Form["start_time"], out TimeOnly start_time);
+    TimeOnly.TryParse(request.Form["end_time"], out TimeOnly end_time);
+    int.TryParse(request.Form["status"], out int status);
+    string? remarks = request.Form["remarks"];
+    var attachment = request.Form.Files["attachment"];
 
-//     return Results.Ok(new RegisterResponse
-//     {
-//         succes = true,
-//         message= "Overtime Data Successfully Added",
-//         origin = null
-//     });
-// });
+    var overtime = await db.Overtime.FindAsync(id);
+
+    if (overtime is null)
+    {
+        return Results.NotFound(new RegisterResponse
+        {
+            succes = false,
+            message= "The Overtime ID is not exist",
+            origin = null
+        });
+    }
+
+        overtime.start_date = start_date;
+        overtime.end_date = end_date;
+        overtime.start_time = start_time;
+        overtime.end_time = end_time;
+        int thisDuration = (int) (end_time - start_time).Hours;
+        overtime.duration = thisDuration;
+        overtime.status = status;
+
+        switch (status)
+            {
+            case 1:
+                overtime.status_text = "Request Approval";
+                overtime.request_date = DateOnly.FromDateTime(DateTime.Now);
+                overtime.request_time = TimeOnly.FromDateTime(DateTime.Now);
+                break;
+            case 2:
+                overtime.status_text = "Approved";
+                overtime.approved_date = DateOnly.FromDateTime(DateTime.Now);
+                overtime.approved_time = TimeOnly.FromDateTime(DateTime.Now);
+                break;
+            case 3:
+                overtime.status_text = "Rejected";
+                overtime.is_completed = 1;
+                overtime.completed_date = DateOnly.FromDateTime(DateTime.Now);
+                overtime.completed_time = TimeOnly.FromDateTime(DateTime.Now);
+                break;
+            case 4:
+                overtime.status_text = "Settlement Approval";
+                overtime.start_date = start_date;
+                overtime.start_time = start_time;
+                overtime.end_date = end_date;
+                overtime.end_time = end_time;
+                overtime.remarks = remarks;
+                // result.attachment = uploadResult.Url.ToString();
+                break;
+            case 5:
+                overtime.status_text = "Revise";
+                break;
+            case 6:
+                overtime.status_text = "Completed";
+                overtime.is_completed = 1;
+                overtime.completed_date = DateOnly.FromDateTime(DateTime.Now);
+                overtime.completed_time = TimeOnly.FromDateTime(DateTime.Now);
+                break;
+            case 9:
+                overtime.status_text = "Cancelled";
+                overtime.is_completed = 1;
+                overtime.completed_date = DateOnly.FromDateTime(DateTime.Now);
+                overtime.completed_time = TimeOnly.FromDateTime(DateTime.Now);
+                break;
+            }
+        overtime.remarks = remarks;
+        // // result.attachment = uploadResult.Url.ToString();
+
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new RegisterResponse
+        {
+            succes = true,
+            message= "Your overtime data has successfully updated",
+            origin = null
+        });
+    }
+);
 
 app.UseAuthentication();
 app.UseAuthorization();

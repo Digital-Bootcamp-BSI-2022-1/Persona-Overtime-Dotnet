@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using dotnet_2.Infrastructure.Data;
@@ -11,9 +12,10 @@ using dotnet_2.Infrastructure.Data;
 namespace Persona.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220915070721_edit-overtime5")]
+    partial class editovertime5
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -219,41 +221,6 @@ namespace Persona.Migrations
                     b.HasIndex("organizationid");
 
                     b.ToTable("User");
-                });
-
-            modelBuilder.Entity("dotnet_2.Infrastructure.Data.Models.WorkSchedule", b =>
-                {
-                    b.Property<int>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("id"));
-
-                    b.Property<TimeOnly>("end_break_time1")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("end_break_time2")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("end_time")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("start_break_time1")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("start_break_time2")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("start_time")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<string>("work_shedule")
-                        .HasColumnType("text");
-
-                    b.HasKey("id");
-
-                    b.ToTable("WorkSchedules");
                 });
 
             modelBuilder.Entity("dotnet_2.Infrastructure.Data.Models.Organization", b =>

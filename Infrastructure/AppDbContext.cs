@@ -10,6 +10,7 @@ class AppDbContext : DbContext
     public DbSet<AuthTokenn> AuthTokenns { get; set; }
     public DbSet<Organization> Organizations { get; set; }
     public DbSet<Overtime> Overtime { get; set; }
+    public DbSet<WorkSchedule> WorkSchedules { get; set; }
 
     public string DbPath { get; }
 

@@ -37,4 +37,13 @@ namespace dotnet_2.Infrastructure.Data.Config
             .HasColumnName("id");
         }
     }
+
+    public class WorkScheduleConfiguration : IEntityTypeConfiguration<WorkSchedule>
+    {
+        public void Configure(EntityTypeBuilder<WorkSchedule> builder)
+        {
+            builder.Property(b => b.id)
+            .HasColumnName("id");
+        }
+    }
 }
