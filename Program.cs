@@ -7,6 +7,8 @@ using dotnet_2.Infrastructure.Dto;
 using dotnet_2.Infrastructure.Shared;
 using dotnet_2.Infrastructure.Data;
 using dotnet_2.Infrastructure;
+using dotnet_2.Infrastructure.Data.Converter;
+
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 
@@ -15,6 +17,16 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 var builder = WebApplication.CreateBuilder(args);
+
+// Set the JSON serializer options
+builder.Services.AddControllers().AddJsonOptions(
+    options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());  
+        options.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());  
+    }
+);
+
 var securityScheme = new OpenApiSecurityScheme() 
 
 {
@@ -95,6 +107,7 @@ builder.Services.AddHttpContextAccessor();
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -378,19 +391,37 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         overtime.start_time = start_time;
         overtime.end_time = end_time;
 
+        // create time range in overtime request time data
         var ot_range = Enumerable.Range(0, int.MaxValue)
           .Select(multiplier => start_time.Add(TimeSpan.FromMinutes(30 * multiplier)))
           .TakeWhile(span => span <= end_time);
-
+       
         var breaktime = await db.WorkSchedules.FirstOrDefaultAsync();
 
-        int thisDuration1 = (int) (end_time - start_time).Hours;
-
+        // validate the breaktime for overtime duration
         foreach(TimeOnly i in ot_range)
         {
-            if ( i >= breaktime!.start_break_time1 && i <= breaktime.end_break_time1) thisDuration1--;
-            else if ( i >= breaktime!.start_break_time2 && i <= breaktime.end_break_time2) thisDuration1--;
+            
+            Console.WriteLine(breaktime!.start_break_time2);
+            Console.WriteLine(i);
+            Console.WriteLine(breaktime.end_break_time2);
+            if ( i >= breaktime!.start_break_time1 && i <= breaktime.end_break_time1) 
+            {
+                Console.WriteLine("istirahat siang work");
+                start_time = start_time.AddHours(1);
+            }
+            else if (i >= breaktime!.start_break_time2 && i <= breaktime.end_break_time2)
+            {
+                Console.WriteLine("istirahat malam work");
+                start_time = start_time.AddHours(1);
+            }
+            else
+            {
+                start_time = start_time;
+            }
         };
+
+        int thisDuration1 = (int) (end_time - start_time).Hours;
         
         overtime.duration = thisDuration1;
 
@@ -434,6 +465,28 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
             origin = null
         });
     }
+    
+    Account account = new Account(
+        "personacloud",
+        "928111718482376",
+        "jSta9msnS2hrHI-2SYyl7D1wPXA");
+
+    Cloudinary cloudinary = new Cloudinary(account);
+    cloudinary.Api.Secure = true;
+
+    var uploadFile = context.Request.Form.Files["attachment"];
+    var file = new FileInfo(context.Request.Form.Files["attachment"].FileName);
+    string filename = file.ToString().Substring(0, file.ToString().Length - file.Extension.ToString().Length);
+
+    using (var filestream = uploadFile!.OpenReadStream())
+    {
+        var uploadUpload = new ImageUploadParams
+        {
+            File = new FileDescription(uploadFile.FileName, filestream),
+            PublicId = $"{DateTime.Now.ToString("yyyy-MM-ddThh-mm-ss")}_{filename}"
+        };
+
+        var uploadResult = await cloudinary.UploadAsync(uploadUpload);
 
         overtime.start_date = start_date;
         overtime.end_date = end_date;
@@ -486,8 +539,41 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
                 overtime.completed_time = TimeOnly.FromDateTime(DateTime.Now);
                 break;
             }
+        // create time range in overtime request time data
+        var ot_range = Enumerable.Range(0, int.MaxValue)
+          .Select(multiplier => start_time.Add(TimeSpan.FromMinutes(30 * multiplier)))
+          .TakeWhile(span => span <= end_time);
+       
+        var breaktime = await db.WorkSchedules.FirstOrDefaultAsync();
+
+        // validate the breaktime for overtime duration
+        foreach(TimeOnly i in ot_range)
+        {
+            
+            Console.WriteLine(breaktime!.start_break_time2);
+            Console.WriteLine(i);
+            Console.WriteLine(breaktime.end_break_time2);
+            if ( i >= breaktime!.start_break_time1 && i <= breaktime.end_break_time1) 
+            {
+                Console.WriteLine("istirahat siang work");
+                start_time = start_time.AddHours(1);
+            }
+            else if (i >= breaktime!.start_break_time2 && i <= breaktime.end_break_time2)
+            {
+                Console.WriteLine("istirahat malam work");
+                start_time = start_time.AddHours(1);
+            }
+            else
+            {
+                start_time = start_time;
+            }
+        };
+
+        // calculate overtime duration
+        int thisDuration1 = (int) (end_time - start_time).Hours;
+        overtime.duration = thisDuration1;
         overtime.remarks = remarks;
-        // // result.attachment = uploadResult.Url.ToString();
+        overtime.attachment = uploadResult.Url.ToString();
 
         await db.SaveChangesAsync();
 
@@ -497,9 +583,66 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
             message= "Your overtime data has successfully updated",
             origin = null
         });
-    }
-);
+    }});
 
+// get overtime list (need approval)
+app.MapGet("/overtime/need_approval", [Authorize] async (AppDbContext db, HttpContext context) => 
+{
+    var overtime = await db.Overtime.Where(item => item.status == 1).ToListAsync();
+
+    if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No Data was Found",
+        origin = null
+    } );
+    
+    return Results.Ok(overtime);
+});
+
+// get overtime list (approved)
+app.MapGet("/overtime/approved", [Authorize] async (AppDbContext db, HttpContext context) => 
+{
+    var overtime = await db.Overtime.Where(item => item.status == 2 || item.status == 4 || item.status == 5).ToListAsync();
+
+    if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No Data was Found",
+        origin = null
+    } );
+    return Results.Ok(overtime);
+});
+
+// get overtime list (completed)
+app.MapGet("/overtime/completed", [Authorize] async (AppDbContext db, HttpContext context) => 
+{
+    var overtime = await db.Overtime.Where(item => item.status == 6).ToListAsync();
+
+    if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No Data was Found",
+        origin = null
+    } );
+    Overtime overtime1 = new Overtime();
+    return Results.Ok(overtime);
+});
+
+// get overtime list (rejected & cancelled)
+app.MapGet("/overtime/rejected_cancelled", [Authorize] async (AppDbContext db, HttpContext context) => 
+{
+    var overtime = await db.Overtime.Where(item => item.status == 3 || item.status == 9).ToListAsync();
+
+    if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No Data was Found",
+        origin = null
+    } );
+    
+    return Results.Ok(overtime);
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.Run();

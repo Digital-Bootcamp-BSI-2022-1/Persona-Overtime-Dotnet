@@ -53,7 +53,7 @@ namespace Persona.Migrations
 
                     b.HasKey("id");
 
-                    b.ToTable("AuthTokenn");
+                    b.ToTable("AuthTokenn", (string)null);
                 });
 
             modelBuilder.Entity("dotnet_2.Infrastructure.Data.Models.Organization", b =>
@@ -77,7 +77,7 @@ namespace Persona.Migrations
 
                     b.HasIndex("headid");
 
-                    b.ToTable("Organization");
+                    b.ToTable("Organization", (string)null);
                 });
 
             modelBuilder.Entity("dotnet_2.Infrastructure.Data.Models.Overtime", b =>
@@ -144,7 +144,7 @@ namespace Persona.Migrations
 
                     b.HasIndex("userid");
 
-                    b.ToTable("Overtime");
+                    b.ToTable("Overtime", (string)null);
                 });
 
             modelBuilder.Entity("dotnet_2.Infrastructure.Data.Models.User", b =>
@@ -218,7 +218,7 @@ namespace Persona.Migrations
 
                     b.HasIndex("organizationid");
 
-                    b.ToTable("User");
+                    b.ToTable("User", (string)null);
                 });
 
             modelBuilder.Entity("dotnet_2.Infrastructure.Data.Models.WorkSchedule", b =>
@@ -253,7 +253,7 @@ namespace Persona.Migrations
 
                     b.HasKey("id");
 
-                    b.ToTable("WorkSchedules");
+                    b.ToTable("WorkSchedules", (string)null);
                 });
 
             modelBuilder.Entity("dotnet_2.Infrastructure.Data.Models.Organization", b =>

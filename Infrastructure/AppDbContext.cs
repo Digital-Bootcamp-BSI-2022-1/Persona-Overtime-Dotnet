@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using dotnet_2.Infrastructure.Data.Models;
 using System.Reflection;
+using dotnet_2.Infrastructure.Data.Converter;
 
 
 namespace dotnet_2.Infrastructure.Data;
@@ -26,6 +27,4 @@ class AppDbContext : DbContext
 
         modelBuilder.Entity<User>().HasOne(p => p.organization).WithMany(b => b.member);
     }
-        
-
 }
