@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using System.Text;
+using System.Text.Json;
 using dotnet_2.Infrastructure.Data.Models;
 using dotnet_2.Infrastructure.Data.Services;
 using dotnet_2.Infrastructure.Dto;
@@ -16,6 +17,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using AutoMapper;
 var builder = WebApplication.CreateBuilder(args);
 
 // Set the JSON serializer options
@@ -618,7 +620,14 @@ if (overtime.attachment != null)
 // get all overtime list
 app.MapGet("/overtime", [Authorize] async (AppDbContext db, HttpContext context) => 
 {
-    var overtime = await db.Overtime.ToListAsync();
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    var userDTO = new UserOTDto(user);
+    var overtime = await db.Overtime
+        .Include(item => item.user)
+        .Where(item => item.user == user).ToListAsync();
+    overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
@@ -627,13 +636,21 @@ app.MapGet("/overtime", [Authorize] async (AppDbContext db, HttpContext context)
         origin = null
     } );
     
-    return Results.Ok(overtime);
+    List<overtimeDTO> overtimedto = new List<overtimeDTO>();
+    return Results.Ok(allUser);
 });
 
 // get overtime list (need approval)
 app.MapGet("/overtime/need_approval", [Authorize] async (AppDbContext db, HttpContext context) => 
 {
-    var overtime = await db.Overtime.Where(item => item.status == 1).ToListAsync();
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    var userDTO = new UserOTDto(user);
+    var overtime = await db.Overtime
+        .Include(item => item.user)
+        .Where(item => item.user == user && item.status == 1).ToListAsync();
+    overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
@@ -642,42 +659,21 @@ app.MapGet("/overtime/need_approval", [Authorize] async (AppDbContext db, HttpCo
         origin = null
     } );
     
-    return Results.Ok(overtime);
+    List<overtimeDTO> overtimedto = new List<overtimeDTO>();
+    return Results.Ok(allUser);
 });
 
 // get overtime list (approved)
 app.MapGet("/overtime/approved", [Authorize] async (AppDbContext db, HttpContext context) => 
 {
-    var overtime = await db.Overtime.Where(item => item.status == 1 || item.status == 2 || item.status == 4 || item.status == 5).ToListAsync();
-
-    if (overtime is null) return Results.NotFound(new RegisterResponse
-    {
-        succes = false,
-        message= "No Data was Found",
-        origin = null
-    } );
-    return Results.Ok(overtime);
-});
-
-// get overtime list (completed)
-app.MapGet("/overtime/completed", [Authorize] async (AppDbContext db, HttpContext context) => 
-{
-    var overtime = await db.Overtime.Where(item => item.status == 6).ToListAsync();
-
-    if (overtime is null) return Results.NotFound(new RegisterResponse
-    {
-        succes = false,
-        message= "No Data was Found",
-        origin = null
-    } );
-    Overtime overtime1 = new Overtime();
-    return Results.Ok(overtime);
-});
-
-// get overtime list (rejected & cancelled)
-app.MapGet("/overtime/rejected_cancelled", [Authorize] async (AppDbContext db, HttpContext context) => 
-{
-    var overtime = await db.Overtime.Where(item => item.status == 3 || item.status == 9).ToListAsync();
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    var userDTO = new UserOTDto(user);
+    var overtime = await db.Overtime
+        .Include(item => item.user)
+        .Where(item => item.status == 2 || item.status == 4 || item.status == 5).ToListAsync();
+    overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
@@ -686,7 +682,54 @@ app.MapGet("/overtime/rejected_cancelled", [Authorize] async (AppDbContext db, H
         origin = null
     } );
     
-    return Results.Ok(overtime);
+    List<overtimeDTO> overtimedto = new List<overtimeDTO>();
+    return Results.Ok(allUser);
+});
+
+// get overtime list (completed)
+app.MapGet("/overtime/completed", [Authorize] async (AppDbContext db, HttpContext context) => 
+{
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    var userDTO = new UserOTDto(user);
+    var overtime = await db.Overtime
+        .Include(item => item.user)
+        .Where(item => item.status == 6).ToListAsync();
+    overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+
+    if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No Data was Found",
+        origin = null
+    } );
+    
+    List<overtimeDTO> overtimedto = new List<overtimeDTO>();
+    return Results.Ok(allUser);
+});
+
+// get overtime list (rejected & cancelled)
+app.MapGet("/overtime/rejected_cancelled", [Authorize] async (AppDbContext db, HttpContext context) => 
+{
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    var userDTO = new UserOTDto(user);
+    var overtime = await db.Overtime
+        .Include(item => item.user)
+        .Where(item => item.status == 3 || item.status == 9).ToListAsync();
+    overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+
+    if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No Data was Found",
+        origin = null
+    } );
+    
+    List<overtimeDTO> overtimedto = new List<overtimeDTO>();
+    return Results.Ok(allUser);
 });
 app.UseAuthentication();
 app.UseAuthorization();
