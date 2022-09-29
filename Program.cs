@@ -17,7 +17,6 @@ using Microsoft.OpenApi.Models;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using AutoMapper;
 var builder = WebApplication.CreateBuilder(args);
 
 // Set the JSON serializer options
