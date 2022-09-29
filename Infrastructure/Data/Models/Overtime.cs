@@ -22,6 +22,8 @@ using dotnet_2.Infrastructure.Data.Converter;
 
         [property: JsonConverter(typeof(TimeOnlyJsonConverter))]
         public TimeOnly end_time { get; set; }
+        public int break_duration1 { get; set; }
+        public int break_duration2 { get; set; }
         public int duration { get; set; }
         public int status { get; set; }
         public string? status_text { get; set; }
