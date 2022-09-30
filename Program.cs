@@ -301,6 +301,16 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         });
     }
 
+    if (start_time > end_time)
+    {
+        return Results.BadRequest(new RegisterResponse
+        {
+            succes = false,
+            message= "end time must be Greater than or equal with the start time",
+            origin = null
+        });
+    }
+
     var result = await db.Users.Where(item => item.grade == "VIA").FirstOrDefaultAsync();
 
     if (result == null)
@@ -484,6 +494,16 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
         {
             succes = false,
             message= "end date must be Greater than or equal with the start date",
+            origin = null
+        });
+    }
+
+    if (start_time > end_time)
+    {
+        return Results.BadRequest(new RegisterResponse
+        {
+            succes = false,
+            message= "end time must be Greater than or equal with the start time",
             origin = null
         });
     }
