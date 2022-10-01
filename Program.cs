@@ -384,6 +384,8 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         overtime.end_date = end_date;
         overtime.start_time = start_time;
         overtime.end_time = end_time;
+        overtime.status = status;
+        
 
         // create time range in overtime request time data
         var ot_range = Enumerable.Range(0, int.MaxValue)
@@ -423,8 +425,9 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         overtime.duration = thisDuration1 - overtime.break_duration1 - overtime.break_duration2;
         overtime.remarks = remarks;
 
-    
-    if (overtime.attachment != null)
+    if (attachment == null)
+    {attachment = null;}
+    else
     {Account account = new Account(
         "personacloud",
         "928111718482376",
@@ -433,7 +436,6 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
     Cloudinary cloudinary = new Cloudinary(account);
     cloudinary.Api.Secure = true;
 
-    
     var uploadFile = context.Request.Form.Files["attachment"];
     var file = new FileInfo(context.Request.Form.Files["attachment"].FileName);
     string filename = file.ToString().Substring(0, file.ToString().Length - file.Extension.ToString().Length);
@@ -449,8 +451,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         var uploadResult = await cloudinary.UploadAsync(uploadUpload);
         
         overtime.attachment = uploadResult.Url.ToString();}}
-        overtime.attachment = null;
-    
+
         overtime.request_date = DateOnly.FromDateTime(DateTime.Now);
         overtime.request_time = TimeOnly.FromDateTime(DateTime.Now);
 
@@ -597,9 +598,12 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
         // calculate overtime duration
         int thisDuration1 = (int) (end_time - start_time).Hours;
         overtime.duration = thisDuration1 - overtime.break_duration1 - overtime.break_duration2;
+
         overtime.remarks = remarks;
 
-if (overtime.attachment != null)
+    if (attachment == null)
+    {overtime.attachment = null;}
+    else
     {Account account = new Account(
         "personacloud",
         "928111718482376",
@@ -608,7 +612,6 @@ if (overtime.attachment != null)
     Cloudinary cloudinary = new Cloudinary(account);
     cloudinary.Api.Secure = true;
 
-    
     var uploadFile = context.Request.Form.Files["attachment"];
     var file = new FileInfo(context.Request.Form.Files["attachment"].FileName);
     string filename = file.ToString().Substring(0, file.ToString().Length - file.Extension.ToString().Length);
@@ -624,7 +627,6 @@ if (overtime.attachment != null)
         var uploadResult = await cloudinary.UploadAsync(uploadUpload);
         
         overtime.attachment = uploadResult.Url.ToString();}}
-        overtime.attachment = null;
 
         await db.SaveChangesAsync();
 
@@ -645,6 +647,29 @@ app.MapGet("/overtime", [Authorize] async (AppDbContext db, HttpContext context)
     var overtime = await db.Overtime
         .Include(item => item.user)
         .Where(item => item.user == user).ToListAsync();
+    overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+
+    if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No Data was Found",
+        origin = null
+    } );
+    
+    List<overtimeDTO> overtimedto = new List<overtimeDTO>();
+    return Results.Ok(allUser);
+});
+
+// get all overtime list by id
+app.MapGet("/overtime/{id}", [Authorize] async (int id, AppDbContext db, HttpContext context) => 
+{
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    var userDTO = new UserOTDto(user);
+    var overtime = await db.Overtime
+        .Include(item => item.user)
+        .Where(item => item.user == user && item.id == id).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
     var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
 
