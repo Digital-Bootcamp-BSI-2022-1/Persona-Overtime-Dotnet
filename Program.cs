@@ -426,7 +426,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         overtime.remarks = remarks;
 
     if (attachment == null)
-    {attachment = null;}
+    {overtime.attachment = null;}
     else
     {Account account = new Account(
         "personacloud",
