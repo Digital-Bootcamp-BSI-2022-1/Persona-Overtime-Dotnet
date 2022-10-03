@@ -144,7 +144,9 @@ app.MapPut("/edit/users", async (User editUser, AppDbContext db, HttpContext con
 
     if (user is null) return Results.NotFound();
     user.nik = editUser.nik;
-    user.password = editUser.password;
+
+    var passwordHash = BCrypt.Net.BCrypt.HashPassword(editUser.password).ToString();
+    user.password = passwordHash;
     user.name = editUser.name;
     user.role = editUser.role;
     user.grade = editUser.grade;
@@ -154,9 +156,11 @@ app.MapPut("/edit/users", async (User editUser, AppDbContext db, HttpContext con
     user.ktp = editUser.ktp;
     user.npwp = editUser.npwp;
     user.join_date = editUser.join_date;
+    user.organization = editUser.organization;
     await db.SaveChangesAsync();
     return Results.Ok("Edit Data Successfully");
 });
+
 
 // Login
 app.MapPost("/auth/login", async (LoginRequest request, AppDbContext db) =>
@@ -237,6 +241,31 @@ app.MapPost("/post/organization", [Authorize] async (Organization request, AppDb
     });
 });
 
+// Edit Organization Data
+app.MapPost("/edit/organization/{id}", [Authorize] async (int id, Organization editOrganization, AppDbContext db, HttpContext context) =>
+{
+    var result = await db.Organizations.Where(item => item.id == id).FirstOrDefaultAsync();
+
+    if (result == null)
+    {
+        return Results.BadRequest(new RegisterResponse{
+        succes = false,
+        message= "organization ID not found",
+        origin = null
+    });
+    }
+    result.organization_name = editOrganization.organization_name;
+    result.head = editOrganization.head;
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new RegisterResponse
+    {
+        succes = true,
+        message= $"Organization data Successfully Edited",
+        origin = null
+    });
+});
+
 // Post work shedule data
 app.MapPost("/post/work_shedule", [Authorize] async (HttpRequest request, AppDbContext db, HttpContext context) =>
 {
@@ -291,6 +320,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
     string? remarks = request.Form["remarks"];
     var attachment = request.Form.Files["attachment"];
 
+    
     if (start_date > end_date)
     {
         return Results.BadRequest(new RegisterResponse
@@ -311,9 +341,10 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         });
     }
 
-    var result = await db.Users.Where(item => item.grade == "VIA").FirstOrDefaultAsync();
-
-    if (result == null)
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FirstOrDefaultAsync(item => item.id == int.Parse(tokenData.id!) && item.grade == "VIA");
+    
+    if (user == null)
     {
         return Results.NotFound(new RegisterResponse
         {
@@ -323,7 +354,6 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         });
     }
 
-   
     var overtime_data = await db.Overtime.Where(item => item.start_date == start_date).FirstOrDefaultAsync();
     
     if (overtime_data != null)
@@ -375,10 +405,6 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
                 overtime.completed_time = TimeOnly.FromDateTime(DateTime.Now);
                 break;  
     }
-
-    var tokenData = new Jwt().GetTokenClaim(context);
-    var user = await db.Users.FindAsync(int.Parse(tokenData.id!));
-
         overtime.start_date = start_date;
         overtime.user = user;
         overtime.end_date = end_date;
@@ -670,6 +696,30 @@ app.MapGet("/overtime/{id}", [Authorize] async (int id, AppDbContext db, HttpCon
     var overtime = await db.Overtime
         .Include(item => item.user)
         .Where(item => item.user == user && item.id == id).ToListAsync();
+    overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+
+    if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No Data was Found",
+        origin = null
+    } );
+    
+    List<overtimeDTO> overtimedto = new List<overtimeDTO>();
+    return Results.Ok(allUser);
+});
+
+// get all overtime list (superior page)
+app.MapGet("/overtime/superior", [Authorize] async (AppDbContext db, HttpContext context) => 
+{
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var superior_org = await db.Organizations.FirstOrDefaultAsync(item => item.head.id == int.Parse(tokenData.id!));
+    var user = await db.Users.FirstOrDefaultAsync(item => item.organization!.id == superior_org!.id);
+    var userDTO = new UserOTDto(user!);
+    var overtime = await db.Overtime
+        .Include(item => item.user)
+        .Where(item => item.user == user).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
     var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
 
