@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Text.Json;
 using dotnet_2.Infrastructure.Data.Models;
-using dotnet_2.Infrastructure.Data.Services;
 using dotnet_2.Infrastructure.Dto;
 using dotnet_2.Infrastructure.Shared;
 using dotnet_2.Infrastructure.Data;
@@ -91,15 +90,6 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 
-builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("Mail"));
-builder.Services.Configure<WaSettings>(builder.Configuration.GetSection("Wa"));
-builder.Services.AddSingleton<IMailService, MailService>();
-builder.Services.AddSingleton<IWaService, WaService>();
-builder.Services.AddSingleton<IMailService, MailService>();
-builder.Services.AddSingleton<IWaService, WaService>();
-builder.Services.AddSingleton<IMailServicePassword, MailServicePassword>();
-builder.Services.AddSingleton<IWaServicePassword, WaServicePasswords>();
-
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication();
 
@@ -117,6 +107,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+//Register user
 app.MapPost("/register", async (User request, AppDbContext db) =>
 {
     var result = await db.Users.Where(item => item.nik == request.nik).FirstOrDefaultAsync();
@@ -160,7 +151,6 @@ app.MapPut("/edit/users", async (User editUser, AppDbContext db, HttpContext con
     await db.SaveChangesAsync();
     return Results.Ok("Edit Data Successfully");
 });
-
 
 // Login
 app.MapPost("/auth/login", async (LoginRequest request, AppDbContext db) =>
@@ -311,6 +301,7 @@ app.MapPost("/post/work_shedule", [Authorize] async (HttpRequest request, AppDbC
 // post Overtime data
 app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db, HttpContext context) =>
 {
+    int.TryParse(request.Form["id"], out int Id);
     DateOnly.TryParse(request.Form["start_date"], out DateOnly start_date);
     DateOnly.TryParse(request.Form["end_date"], out DateOnly end_date);
     TimeOnly.TryParse(request.Form["start_time"], out TimeOnly start_time);
@@ -354,7 +345,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         });
     }
 
-    var overtime_data = await db.Overtime.Where(item => item.start_date == start_date).FirstOrDefaultAsync();
+    var overtime_data = await db.Overtime.Where(item => item.start_date == start_date && item.user == user).FirstOrDefaultAsync();
     
     if (overtime_data != null)
         {
@@ -480,7 +471,8 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
 
         overtime.request_date = DateOnly.FromDateTime(DateTime.Now);
         overtime.request_time = TimeOnly.FromDateTime(DateTime.Now);
-
+    
+    
     db.Overtime.Add(overtime);
     await db.SaveChangesAsync();
 
@@ -674,7 +666,7 @@ app.MapGet("/overtime", [Authorize] async (AppDbContext db, HttpContext context)
         .Include(item => item.user)
         .Where(item => item.user == user).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
@@ -697,7 +689,7 @@ app.MapGet("/overtime/{id}", [Authorize] async (int id, AppDbContext db, HttpCon
         .Include(item => item.user)
         .Where(item => item.user == user && item.id == id).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
@@ -714,14 +706,24 @@ app.MapGet("/overtime/{id}", [Authorize] async (int id, AppDbContext db, HttpCon
 app.MapGet("/overtime/superior", [Authorize] async (AppDbContext db, HttpContext context) => 
 {
     var tokenData = new Jwt().GetTokenClaim(context);
-    var superior_org = await db.Organizations.FirstOrDefaultAsync(item => item.head.id == int.Parse(tokenData.id!));
-    var user = await db.Users.FirstOrDefaultAsync(item => item.organization!.id == superior_org!.id);
-    var userDTO = new UserOTDto(user!);
-    var overtime = await db.Overtime
-        .Include(item => item.user)
-        .Where(item => item.user == user).ToListAsync();
-    overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+    var user_id = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    //Console.WriteLine(user_id);
+    var superior_org = await db.Organizations.FirstOrDefaultAsync(item => item.head!.id == user_id.id);
+    
+    var user = await db.Users.Include(item => item.organization)
+    .Where(item => item.organization == superior_org).ToListAsync();
+
+    var user_ot = user.Select(item => new User());
+    var overtime = new List<Overtime>();
+    Console.WriteLine(user);
+    foreach(User i in user){
+        Console.WriteLine(i.name);
+        var overtimeItem = await db.Overtime.Include(item => item.user)
+        .Where(item => item.user == i).ToListAsync();
+        foreach(Overtime item in overtimeItem){
+            overtime.Add(item);}}
+    
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
@@ -730,7 +732,6 @@ app.MapGet("/overtime/superior", [Authorize] async (AppDbContext db, HttpContext
         origin = null
     } );
     
-    List<overtimeDTO> overtimedto = new List<overtimeDTO>();
     return Results.Ok(allUser);
 });
 
@@ -744,7 +745,7 @@ app.MapGet("/overtime/need_approval", [Authorize] async (AppDbContext db, HttpCo
         .Include(item => item.user)
         .Where(item => item.user == user && item.status == 1).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
@@ -767,7 +768,7 @@ app.MapGet("/overtime/approved", [Authorize] async (AppDbContext db, HttpContext
         .Include(item => item.user)
         .Where(item => item.status == 2 || item.status == 4 || item.status == 5).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
@@ -790,7 +791,7 @@ app.MapGet("/overtime/completed", [Authorize] async (AppDbContext db, HttpContex
         .Include(item => item.user)
         .Where(item => item.status == 6).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
@@ -813,7 +814,7 @@ app.MapGet("/overtime/rejected_cancelled", [Authorize] async (AppDbContext db, H
         .Include(item => item.user)
         .Where(item => item.status == 3 || item.status == 9).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList();
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
@@ -825,6 +826,7 @@ app.MapGet("/overtime/rejected_cancelled", [Authorize] async (AppDbContext db, H
     List<overtimeDTO> overtimedto = new List<overtimeDTO>();
     return Results.Ok(allUser);
 });
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.Run();
@@ -832,29 +834,6 @@ app.Run();
 record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
-
-
-public interface IMailService
-{
-    Task SendEmailAsync(MailRequest mailRequest);
-
-}
-
-public interface IWaService
-{
-    Task SendWaAsync(MailRequest mailRequest);
-}
-
-public interface IMailServicePassword
-{
-    Task SendEmailPasswordAsync(MailRequestPassword mailRequestPassword);
-
-}
-
-public interface IWaServicePassword
-{
-    Task SendWaPasswordsAsync(MailRequestPassword mailRequestPassword);
 }
 
 interface IAppDbContext 
