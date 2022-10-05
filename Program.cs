@@ -322,7 +322,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         });
     }
 
-    if (start_time > end_time)
+    if (start_date == end_date && start_time > end_time)
     {
         return Results.BadRequest(new RegisterResponse
         {
