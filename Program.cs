@@ -484,7 +484,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
     });
 });
 
-// update Overtime data
+// update Overtime data user page
 app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest request, AppDbContext db, HttpContext context) =>
 {
     DateOnly.TryParse(request.Form["start_date"], out DateOnly start_date);
@@ -506,6 +506,7 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
             origin = null
         });
     }
+
 
     if (start_date > end_date)
     {
@@ -559,7 +560,7 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
                 overtime.start_time = start_time;
                 overtime.end_date = end_date;
                 overtime.end_time = end_time;
-                overtime.remarks = remarks;
+                overtime.remarks = overtime.remarks;
                 // result.attachment = uploadResult.Url.ToString();
                 break;
             case 5:
@@ -617,10 +618,13 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
         int thisDuration1 = (int) (end_time - start_time).Hours;
         overtime.duration = thisDuration1 - overtime.break_duration1 - overtime.break_duration2;
 
-        overtime.remarks = remarks;
+    if(remarks != null)
+        {overtime.remarks = remarks;}
+        overtime.remarks = overtime.remarks;
+        
 
     if (attachment == null)
-    {overtime.attachment = null;}
+    {overtime.attachment = overtime.attachment;}
     else
     {Account account = new Account(
         "personacloud",
@@ -713,7 +717,6 @@ app.MapGet("/overtime/superior", [Authorize] async (AppDbContext db, HttpContext
     var user = await db.Users.Include(item => item.organization)
     .Where(item => item.organization == superior_org).ToListAsync();
 
-    var user_ot = user.Select(item => new User());
     var overtime = new List<Overtime>();
     Console.WriteLine(user);
     foreach(User i in user){
@@ -726,6 +729,38 @@ app.MapGet("/overtime/superior", [Authorize] async (AppDbContext db, HttpContext
     var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No Data was Found",
+        origin = null
+    } );
+    
+    return Results.Ok(allUser);
+});
+
+// get all overtime list (superior page) - detail 1 request
+app.MapGet("/overtime/superior/{id}", [Authorize] async (int id, AppDbContext db, HttpContext context) => 
+{
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user_id = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    //Console.WriteLine(user_id);
+    var superior_org = await db.Organizations.FirstOrDefaultAsync(item => item.head!.id == user_id.id);
+    
+    var user = await db.Users.Include(item => item.organization)
+    .Where(item => item.organization == superior_org).ToListAsync();
+
+    var overtime = new List<Overtime>();
+    foreach(User i in user){
+        Console.WriteLine(i.name);
+        var overtimeItem = await db.Overtime.Include(item => item.user)
+        .Where(item => item.user == i && item.id == id).ToListAsync();
+        foreach(Overtime item in overtimeItem){
+            overtime.Add(item);}
+        }
+    
+    var allUser = overtime.Select(item => new overtimeDTO(item)).OrderBy(item => item.start_date);
+
+    if (allUser is null) return Results.NotFound(new RegisterResponse
     {
         succes = false,
         message= "No Data was Found",

@@ -12,7 +12,7 @@ namespace dotnet_2.Infrastructure.Dto
     {
         public int id { get; set; }
         public UserOTDto user{get;}
-
+        
         [property: JsonConverter(typeof(DateOnlyJsonConverter))]
         public DateOnly start_date { get; set; }
         
