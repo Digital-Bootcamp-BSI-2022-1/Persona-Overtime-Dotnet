@@ -484,7 +484,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
     });
 });
 
-// update Overtime data user page
+// update Overtime data
 app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest request, AppDbContext db, HttpContext context) =>
 {
     DateOnly.TryParse(request.Form["start_date"], out DateOnly start_date);
@@ -507,7 +507,6 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
         });
     }
 
-
     if (start_date > end_date)
     {
         return Results.BadRequest(new RegisterResponse
@@ -518,7 +517,7 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
         });
     }
 
-    if (start_time > end_time)
+    if (start_date == end_date && start_time > end_time)
     {
         return Results.BadRequest(new RegisterResponse
         {
@@ -531,6 +530,7 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
         overtime.start_date = start_date;
         overtime.end_date = end_date;
         overtime.start_time = start_time;
+
         overtime.end_time = end_time;
         int thisDuration = (int) (end_time - start_time).Hours;
         overtime.duration = thisDuration;
