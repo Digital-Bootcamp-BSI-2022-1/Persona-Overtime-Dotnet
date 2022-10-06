@@ -349,7 +349,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
             return Results.BadRequest(new RegisterResponse
             {
                 succes = false,
-                message= $"You already have overtime request on {overtime_date}",
+                message= $"You already have overtime request on this date",
                 origin = null
             });
         }
