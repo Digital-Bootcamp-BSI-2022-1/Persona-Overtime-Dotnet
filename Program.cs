@@ -126,7 +126,7 @@ app.MapPost("/register", async (User request, AppDbContext db) =>
 });
 
 //Edit User Data
-app.MapPut("/edit/users", async (User editUser, AppDbContext db, HttpContext context) =>
+app.MapPut("/edit/users", [Authorize] async (User editUser, AppDbContext db, HttpContext context) =>
 {
     var tokenData = new Jwt().GetTokenClaim(context);
     var user = await db.Users.FindAsync(int.Parse(tokenData.id!));
