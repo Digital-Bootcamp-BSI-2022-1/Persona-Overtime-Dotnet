@@ -27,6 +27,7 @@ builder.Services.AddControllers().AddJsonOptions(
     }
 );
 
+// Authorization
 var securityScheme = new OpenApiSecurityScheme() 
 
 {
@@ -77,7 +78,6 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = false,
         RequireExpirationTime = true
     };
-
 });
 
 // Add services to the container.
@@ -89,10 +89,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication();
-
 builder.Services.AddHttpContextAccessor();
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -123,7 +121,7 @@ app.MapPost("/register", async (User request, AppDbContext db) =>
     db.Users.Add(request);
     await db.SaveChangesAsync();
 
-    return Results.Ok(new { message = "Registration succes!" });
+    return Results.Ok(new { message = "Registration succesfully" });
 
 });
 
@@ -132,7 +130,6 @@ app.MapPut("/edit/users", async (User editUser, AppDbContext db, HttpContext con
 {
     var tokenData = new Jwt().GetTokenClaim(context);
     var user = await db.Users.FindAsync(int.Parse(tokenData.id!));
-
     if (user is null) return Results.NotFound();
     user.nik = editUser.nik;
 
@@ -149,7 +146,7 @@ app.MapPut("/edit/users", async (User editUser, AppDbContext db, HttpContext con
     user.join_date = editUser.join_date;
     user.organization = editUser.organization;
     await db.SaveChangesAsync();
-    return Results.Ok("Edit Data Successfully");
+    return Results.Ok("Edit data successfully");
 });
 
 // Login
@@ -168,7 +165,7 @@ app.MapPost("/auth/login", async (LoginRequest request, AppDbContext db) =>
     // verify password
     if (!verifyPassword)
     {
-        return Results.BadRequest(new { message = "Password Incorrect" });
+        return Results.BadRequest(new { message = "Password incorrect" });
     }
 
     var token = new Jwt().GenerateJwtToken(result);
@@ -200,9 +197,8 @@ app.MapPost("/auth/login", async (LoginRequest request, AppDbContext db) =>
 app.MapGet("/profile", [Authorize] async (AppDbContext db, HttpContext context) => 
 {
     var tokenData = new Jwt().GetTokenClaim(context);
-    var user = await db.Users.FindAsync(int.Parse(tokenData.id!));
-
-    if (user is null) return Results.NotFound("Data Was Not Found");
+    var user = await db.Users.Include(item => item.organization).FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    if (user is null) return Results.NotFound("Data was not found");
     var userdto = new UserDTO(user);
     return Results.Ok(userdto);
 });
@@ -210,13 +206,13 @@ app.MapGet("/profile", [Authorize] async (AppDbContext db, HttpContext context) 
 // Create Organization Data
 app.MapPost("/post/organization", [Authorize] async (Organization request, AppDbContext db, HttpContext context) =>
 {
-    var result = await db.Organizations.Where(item => item.id == request.id).FirstOrDefaultAsync();
+    var result = await db.Organizations.Include(item => item.head).FirstOrDefaultAsync(item => item.id == request.id);
 
     if (result != null)
     {
         return Results.BadRequest(new RegisterResponse{
         succes = false,
-        message= "organization ID already exist",
+        message= "Organization ID already exist",
         origin = null
     });
     }
@@ -226,7 +222,7 @@ app.MapPost("/post/organization", [Authorize] async (Organization request, AppDb
     return Results.Ok(new RegisterResponse
     {
         succes = true,
-        message= $"Organization data Successfully Added",
+        message= $"Organization data successfully added",
         origin = null
     });
 });
@@ -240,7 +236,7 @@ app.MapPost("/edit/organization/{id}", [Authorize] async (int id, Organization e
     {
         return Results.BadRequest(new RegisterResponse{
         succes = false,
-        message= "organization ID not found",
+        message= $"organization ID {id} not found",
         origin = null
     });
     }
@@ -251,7 +247,7 @@ app.MapPost("/edit/organization/{id}", [Authorize] async (int id, Organization e
     return Results.Ok(new RegisterResponse
     {
         succes = true,
-        message= $"Organization data Successfully Edited",
+        message= $"Organization data with ID {id} successfully edited",
         origin = null
     });
 });
@@ -274,7 +270,7 @@ app.MapPost("/post/work_shedule", [Authorize] async (HttpRequest request, AppDbC
     {
         return Results.BadRequest(new RegisterResponse{
         succes = false,
-        message= "WorkShedule ID already exist",
+        message= $"WorkShedule ID {id} already exist",
         origin = null
     });
     }
@@ -293,7 +289,7 @@ app.MapPost("/post/work_shedule", [Authorize] async (HttpRequest request, AppDbC
     return Results.Ok(new RegisterResponse
     {
         succes = true,
-        message= $"WorkShedule data Successfully Added",
+        message= "WorkShedule data successfully added",
         origin = null
     });
 });
@@ -317,7 +313,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         return Results.BadRequest(new RegisterResponse
         {
             succes = false,
-            message= "end date must be Greater than or equal with the start date",
+            message= "end date must be greater than or equal with the start date",
             origin = null
         });
     }
@@ -327,7 +323,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
         return Results.BadRequest(new RegisterResponse
         {
             succes = false,
-            message= "end time must be Greater than or equal with the start time",
+            message= "end time must be greater than or equal with the start time",
             origin = null
         });
     }
@@ -479,7 +475,7 @@ app.MapPost("/overtime", [Authorize] async (HttpRequest request, AppDbContext db
     return Results.Ok(new RegisterResponse
     {
         succes = true,
-        message= "Overtime Data Successfully Added",
+        message= "Overtime data successfully added",
         origin = null
     });
 });
@@ -502,7 +498,7 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
         return Results.NotFound(new RegisterResponse
         {
             succes = false,
-            message= "The Overtime ID is not exist",
+            message= "The overtime ID is not exist",
             origin = null
         });
     }
@@ -512,7 +508,7 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
         return Results.BadRequest(new RegisterResponse
         {
             succes = false,
-            message= "end date must be Greater than or equal with the start date",
+            message= "end date must be greater than or equal with the start date",
             origin = null
         });
     }
@@ -522,7 +518,7 @@ app.MapPost("/update/overtime/{id}", [Authorize] async (int id, HttpRequest requ
         return Results.BadRequest(new RegisterResponse
         {
             succes = false,
-            message= "end time must be Greater than or equal with the start time",
+            message= "end time must be greater than or equal with the start time",
             origin = null
         });
     }
@@ -670,12 +666,12 @@ app.MapGet("/overtime", [Authorize] async (AppDbContext db, HttpContext context)
         .Include(item => item.user)
         .Where(item => item.user == user).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderByDescending(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
         succes = false,
-        message= "No Data was Found",
+        message= "No data was found",
         origin = null
     } );
     
@@ -693,12 +689,12 @@ app.MapGet("/overtime/{id}", [Authorize] async (int id, AppDbContext db, HttpCon
         .Include(item => item.user)
         .Where(item => item.user == user && item.id == id).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderByDescending(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
         succes = false,
-        message= "No Data was Found",
+        message= "No data was found",
         origin = null
     } );
     
@@ -726,12 +722,12 @@ app.MapGet("/overtime/superior", [Authorize] async (AppDbContext db, HttpContext
         foreach(Overtime item in overtimeItem){
             overtime.Add(item);}}
     
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderByDescending(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
         succes = false,
-        message= "No Data was Found",
+        message= "No data was found",
         origin = null
     } );
     
@@ -758,12 +754,12 @@ app.MapGet("/overtime/superior/{id}", [Authorize] async (int id, AppDbContext db
             overtime.Add(item);}
         }
     
-    var allUser = overtime.Select(item => new overtimeDTO(item)).OrderBy(item => item.start_date);
+    var allUser = overtime.Select(item => new overtimeDTO(item)).OrderByDescending(item => item.start_date);
 
     if (allUser is null) return Results.NotFound(new RegisterResponse
     {
         succes = false,
-        message= "No Data was Found",
+        message= "No data was found",
         origin = null
     } );
     
@@ -780,12 +776,12 @@ app.MapGet("/overtime/need_approval", [Authorize] async (AppDbContext db, HttpCo
         .Include(item => item.user)
         .Where(item => item.user == user && item.status == 1).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderByDescending(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
         succes = false,
-        message= "No Data was Found",
+        message= "No data was found",
         origin = null
     } );
     
@@ -803,12 +799,12 @@ app.MapGet("/overtime/approved", [Authorize] async (AppDbContext db, HttpContext
         .Include(item => item.user)
         .Where(item => item.status == 2 || item.status == 4 || item.status == 5).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderByDescending(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
         succes = false,
-        message= "No Data was Found",
+        message= "No data was found",
         origin = null
     } );
     
@@ -826,12 +822,12 @@ app.MapGet("/overtime/completed", [Authorize] async (AppDbContext db, HttpContex
         .Include(item => item.user)
         .Where(item => item.status == 6).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderByDescending(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
         succes = false,
-        message= "No Data was Found",
+        message= "No data was found",
         origin = null
     } );
     
@@ -849,12 +845,12 @@ app.MapGet("/overtime/rejected_cancelled", [Authorize] async (AppDbContext db, H
         .Include(item => item.user)
         .Where(item => item.status == 3 || item.status == 9).ToListAsync();
     overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
-    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderBy(item => item.start_date);
+    var allUser = overtime.Select(item => new overtimeDTO(item)).ToList().OrderByDescending(item => item.start_date);
 
     if (overtime is null) return Results.NotFound(new RegisterResponse
     {
         succes = false,
-        message= "No Data was Found",
+        message= "No data was found",
         origin = null
     } );
     
@@ -866,12 +862,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.Run();
 
-record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
-
 interface IAppDbContext 
-{
-
-}
+{}

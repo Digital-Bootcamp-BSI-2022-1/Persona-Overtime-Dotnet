@@ -10,8 +10,9 @@ using dotnet_2.Infrastructure.Data.Models;
     {   
         public int id { get; set; }
         public string? organization_name { get; set; }
+        public UserDTO head { get; set; }
         public OrganizationDto() { }
-        public OrganizationDto(Organization userItem) =>
-        (id, organization_name) = (userItem.id, userItem.organization_name);
+        public OrganizationDto(Organization organizationItem) =>
+        (id, organization_name, head) = (organizationItem.id, organizationItem.organization_name, new UserDTO(organizationItem.head!));
     }
     }
