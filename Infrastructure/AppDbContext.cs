@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using dotnet_2.Infrastructure.Data.Models;
 using System.Reflection;
+using dotnet_2.Infrastructure.Data.Converter;
 
 
 namespace dotnet_2.Infrastructure.Data;
@@ -10,6 +11,7 @@ class AppDbContext : DbContext
     public DbSet<AuthTokenn> AuthTokenns { get; set; }
     public DbSet<Organization> Organizations { get; set; }
     public DbSet<Overtime> Overtime { get; set; }
+    public DbSet<WorkSchedule> WorkSchedules { get; set; }
 
     public string DbPath { get; }
 
@@ -22,6 +24,7 @@ class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-    }
 
+        modelBuilder.Entity<User>().HasOne(p => p.organization).WithMany(b => b.member);
+    }
 }

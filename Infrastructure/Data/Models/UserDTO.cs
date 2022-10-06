@@ -1,3 +1,5 @@
+using dotnet_2.Infrastructure.Dto;
+
 namespace dotnet_2.Infrastructure.Data.Models{
     public class UserDTO
     {
@@ -12,10 +14,11 @@ namespace dotnet_2.Infrastructure.Data.Models{
         public string? ktp { get; set; }
         public string? npwp { get; set; }
         public string? join_date { get; set; }
+        public OrganizationDto organization { get; set; }
         public UserDTO() { }
         public UserDTO(User userItem) =>
-        (id, nik, name, role, grade, employment_status, phone, email, ktp, npwp, join_date) = 
-        (userItem.id, userItem.nik, userItem.name, userItem.role, userItem.grade, userItem.employment_status, userItem.phone, userItem.email, userItem.ktp, userItem.npwp, userItem.join_date);
+        (id, nik, name, role, grade, employment_status, phone, email, ktp, npwp, join_date, organization) = 
+        (userItem.id, userItem.nik, userItem.name, userItem.role, userItem.grade, userItem.employment_status, userItem.phone, userItem.email, userItem.ktp, userItem.npwp, userItem.join_date, new OrganizationDto(userItem.organization!));
 
     }
 }

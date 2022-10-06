@@ -16,13 +16,7 @@ using System.ComponentModel.DataAnnotations.Schema;
         [Required]
         [Column("organization_name", TypeName = "varchar(200)")]
         public string? organization_name { get; set; }
-        
-        [Required]
-        [Column("head")]
         public User? head { get; set; }
-
-        [Required]
-        [Column("member")]
-        public User? member { get; set; }
+        public List<User>? member { get; set; }
     }
     }

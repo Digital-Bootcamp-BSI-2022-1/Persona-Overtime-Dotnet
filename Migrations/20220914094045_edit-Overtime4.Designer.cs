@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using dotnet_2.Infrastructure.Data;
@@ -11,9 +12,10 @@ using dotnet_2.Infrastructure.Data;
 namespace Persona.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220914094045_edit-Overtime4")]
+    partial class editOvertime4
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -89,61 +91,77 @@ namespace Persona.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("id"));
 
-                    b.Property<DateOnly>("approved_date")
-                        .HasColumnType("date");
+                    b.Property<string>("approved_date")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("approved_date");
 
-                    b.Property<TimeOnly>("approved_time")
-                        .HasColumnType("time without time zone");
+                    b.Property<string>("approved_time")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("approved_time");
 
                     b.Property<string>("attachment")
-                        .HasColumnType("text");
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("attachment");
 
-                    b.Property<int>("break_duration1")
-                        .HasColumnType("integer");
+                    b.Property<string>("completed_date")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("completed_date");
 
-                    b.Property<int>("break_duration2")
-                        .HasColumnType("integer");
+                    b.Property<string>("completed_time")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("completed_time");
 
-                    b.Property<DateOnly>("completed_date")
-                        .HasColumnType("date");
+                    b.Property<string>("end_date")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("end_date");
 
-                    b.Property<TimeOnly>("completed_time")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<int>("duration")
-                        .HasColumnType("integer");
-
-                    b.Property<DateOnly>("end_date")
-                        .HasColumnType("date");
-
-                    b.Property<TimeOnly>("end_time")
-                        .HasColumnType("time without time zone");
+                    b.Property<string>("end_time")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("end_time");
 
                     b.Property<int>("is_completed")
-                        .HasColumnType("integer");
+                        .HasColumnType("int")
+                        .HasColumnName("is_completed");
 
                     b.Property<string>("remarks")
-                        .HasColumnType("text");
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("remarks");
 
-                    b.Property<DateOnly>("request_date")
-                        .HasColumnType("date");
+                    b.Property<string>("request_date")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("request_date");
 
-                    b.Property<TimeOnly>("request_time")
-                        .HasColumnType("time without time zone");
+                    b.Property<string>("request_time")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("request_time");
 
-                    b.Property<DateOnly>("start_date")
-                        .HasColumnType("date");
+                    b.Property<string>("start_date")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("start_date");
 
-                    b.Property<TimeOnly>("start_time")
-                        .HasColumnType("time without time zone");
+                    b.Property<string>("start_time")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("start_time");
 
                     b.Property<int>("status")
-                        .HasColumnType("integer");
+                        .HasColumnType("int")
+                        .HasColumnName("status");
 
                     b.Property<string>("status_text")
-                        .HasColumnType("text");
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("status_text");
 
-                    b.Property<int?>("userid")
+                    b.Property<int>("userid")
                         .HasColumnType("integer");
 
                     b.HasKey("id");
@@ -227,41 +245,6 @@ namespace Persona.Migrations
                     b.ToTable("User");
                 });
 
-            modelBuilder.Entity("dotnet_2.Infrastructure.Data.Models.WorkSchedule", b =>
-                {
-                    b.Property<int>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("id"));
-
-                    b.Property<TimeOnly>("end_break_time1")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("end_break_time2")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("end_time")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("start_break_time1")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("start_break_time2")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("start_time")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<string>("work_shedule")
-                        .HasColumnType("text");
-
-                    b.HasKey("id");
-
-                    b.ToTable("WorkSchedules");
-                });
-
             modelBuilder.Entity("dotnet_2.Infrastructure.Data.Models.Organization", b =>
                 {
                     b.HasOne("dotnet_2.Infrastructure.Data.Models.User", "head")
@@ -275,7 +258,9 @@ namespace Persona.Migrations
                 {
                     b.HasOne("dotnet_2.Infrastructure.Data.Models.User", "user")
                         .WithMany("users")
-                        .HasForeignKey("userid");
+                        .HasForeignKey("userid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("user");
                 });
