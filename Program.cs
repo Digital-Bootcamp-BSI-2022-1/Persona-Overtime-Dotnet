@@ -679,6 +679,46 @@ app.MapGet("/overtime", [Authorize] async (AppDbContext db, HttpContext context)
     return Results.Ok(allUser);
 });
 
+// get statistic overtime by status requester page
+app.MapGet("/overtime/statistic", [Authorize] async (AppDbContext db, HttpContext context) => 
+{
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    var date_now = DateOnly.FromDateTime(DateTime.Now);
+    int current_month = date_now.Month;
+
+    var overtime = await db.Overtime
+        .Include(item => item.user)
+        .Where(item => item.user == user).ToListAsync();
+    overtime.ForEach(i => Console.WriteLine(JsonSerializer.Serialize(i.id)));
+
+    if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No data was found",
+        origin = null
+    } );
+    
+   var response = new SuccessResponse<OvertimeStatistic>
+        {
+            data = new OvertimeStatistic
+            {
+                need_approval = await db.Overtime.Where(item => item.user == user && item.status == 1 && item.start_date.Month == current_month).CountAsync(),
+                approved = await db.Overtime.Where(item => item.user == user && item.status == 2 && item.start_date.Month == current_month).CountAsync(),
+                rejected = await db.Overtime.Where(item => item.user == user && item.status == 3 && item.start_date.Month == current_month).CountAsync(),
+                settlement_approval  = await db.Overtime.Where(item => item.user == user && item.status == 4 && item.start_date.Month == current_month).CountAsync(),
+                revise = await db.Overtime.Where(item => item.user == user && item.status == 5 && item.start_date.Month == current_month).CountAsync(),
+                completed = await db.Overtime.Where(item => item.user == user && item.status == 6 && item.start_date.Month == current_month).CountAsync(),
+                cancelled  = await db.Overtime.Where(item => item.user == user && item.status == 9 && item.start_date.Month == current_month).CountAsync(),
+            },
+            success = true,
+            message = "Data has been successfully retrieved",
+            origin = null
+        };
+    
+    return Results.Ok(response);
+});
+
 // get all overtime list by id
 app.MapGet("/overtime/{id}", [Authorize] async (int id, AppDbContext db, HttpContext context) => 
 {
@@ -707,7 +747,6 @@ app.MapGet("/overtime/superior", [Authorize] async (AppDbContext db, HttpContext
 {
     var tokenData = new Jwt().GetTokenClaim(context);
     var user_id = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
-    //Console.WriteLine(user_id);
     var superior_org = await db.Organizations.FirstOrDefaultAsync(item => item.head!.id == user_id.id);
     
     var user = await db.Users.Include(item => item.organization)
@@ -732,6 +771,54 @@ app.MapGet("/overtime/superior", [Authorize] async (AppDbContext db, HttpContext
     } );
     
     return Results.Ok(allUser);
+});
+
+// get statistic overtime by status superior page
+app.MapGet("/overtime/statistic/superior", [Authorize] async (AppDbContext db, HttpContext context) => 
+{
+    var tokenData = new Jwt().GetTokenClaim(context);
+    var user_id = await db.Users.FirstOrDefaultAsync(item => item.id ==int.Parse(tokenData.id!));
+    var superior_org = await db.Organizations.FirstOrDefaultAsync(item => item.head!.id == user_id.id);
+    
+    var user = await db.Users.Include(item => item.organization)
+    .Where(item => item.organization == superior_org).ToListAsync();
+
+    var overtime = new List<Overtime>();
+    foreach(User i in user){
+        Console.WriteLine(i.name);
+        var overtimeItem = await db.Overtime.Include(item => item.user)
+        .Where(item => item.user == i).ToListAsync();
+        foreach(Overtime item in overtimeItem){
+            overtime.Add(item);}}
+
+    var date_now = DateOnly.FromDateTime(DateTime.Now);
+    int current_month = date_now.Month;
+
+    if (overtime is null) return Results.NotFound(new RegisterResponse
+    {
+        succes = false,
+        message= "No data was found",
+        origin = null
+    } );
+    
+   var response = new SuccessResponse<OvertimeStatistic>
+        {
+            data = new OvertimeStatistic
+            {
+                need_approval = await db.Overtime.Where(item => item.user.organization == superior_org && item.status == 1 && item.start_date.Month == current_month).CountAsync(),
+                approved = await db.Overtime.Where(item => item.user.organization == superior_org && item.status == 2 && item.start_date.Month == current_month).CountAsync(),
+                rejected = await db.Overtime.Where(item => item.user.organization == superior_org && item.status == 3 && item.start_date.Month == current_month).CountAsync(),
+                settlement_approval  = await db.Overtime.Where(item => item.user.organization == superior_org && item.status == 4 && item.start_date.Month == current_month).CountAsync(),
+                revise = await db.Overtime.Where(item => item.user.organization == superior_org && item.status == 5 && item.start_date.Month == current_month).CountAsync(),
+                completed = await db.Overtime.Where(item => item.user.organization == superior_org && item.status == 6 && item.start_date.Month == current_month).CountAsync(),
+                cancelled  = await db.Overtime.Where(item => item.user.organization == superior_org && item.status == 9 && item.start_date.Month == current_month).CountAsync(),
+            },
+            success = true,
+            message = $"Overtime data has been successfully retrieved", 
+            origin = null
+        };
+    
+    return Results.Ok(response);
 });
 
 // get all overtime list (superior page) - detail 1 request
